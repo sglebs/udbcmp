@@ -1,15 +1,14 @@
 """UDB Compare.
 
 Usage:
-  srccheck       --before=<inputUDB> --after=<inputUDB> --files=<fileWithListOfFiles> --metrics=inlineCSVofNames \r\n \
+  udbcmp       --before=<inputUDB> --after=<inputUDB> \r\n \
+                [--metrics=inlineCSVofNames]
                 [--dllDir=<dllDir>]\r\n \
-                [--outputCSV=<outputCSV>] \r\n \
                 [--verbose]
 
 Options:
   --before=<inputUDB>                           File path to a UDB with the "before" state of your sources
   --after=<inputUDB>                            File path to a UDB with the "after" state of your sources
-  --files=<fileWithListOfFiles>                 File path to a text file with a list of files to compare for metrics changes in the before/after
   --metrics=inlineCSVofNames                    Inline string which is a CSV of names of metrics to compare, from a total listed at https://scitools.com/support/metrics_list/ [default: AvgCyclomaticModified,AvgLineCode]
   --dllDir=<dllDir>                             Path to the dir with the DLL to the Understand Python SDK.[default: C:/Program Files/SciTools/bin/pc-win32/python]
   --verbose                                     If you want lots of messages printed. [default: false]
@@ -42,63 +41,59 @@ def open_udb (udb_path):
         sys.exit(-2)
     return db
 
-def compare_udbs (udb_before, udb_after, file_paths, metric_names):
+def compare_udbs (udb_before, udb_after, metric_names):
     result = {}
-    for file_path in file_paths:
-        attributes = {}
-        result [file_path] = attributes
-        searchstr = re.compile(file_path,re.I)
-        before_metrics = get_file_metrics(metric_names, searchstr, udb_before)
-        after_metrics = get_file_metrics(metric_names, searchstr, udb_after)
-        attributes ["before"] = before_metrics
-        attributes ["after"] = after_metrics
+    populate_file_metrics(udb_before, "before", metric_names, result)
+    populate_file_metrics(udb_after, "after", metric_names, result)
     return result
 
 
-def get_file_metrics(metric_names, searchstr, udb):
-    result = {}
-    file_entities = udb.lookup(searchstr, "File")
-    if len(file_entities) != 1:
-        print ("More than one file found with the same path %s. Contact support." % searchstr)
-        sys.exit(-4)
+def populate_file_metrics(udb, tag, metric_names, result):
+    # result: dict {key: <file-path>, value: dict {key: tag, value : dict (key: metric-name, value: metric-value} } }
+    file_entities = udb.ents("file ~Unresolved ~Unknown ~Unparsed")
     for file_entity in file_entities:
+        library_name = file_entity.library()
+        if file_entity.library() is not "": # skip files that belong to external libraries
+            continue
+        file_path = file_entity.relname()
+        file_attribs = {}
+        if file_path not in result:
+           result[file_path] = file_attribs
+        else:
+            file_attribs = result[file_path]
+        file_metrics_by_tag = {}
+        if tag not in file_attribs:
+           file_attribs[tag] = file_metrics_by_tag
+        else:
+            file_metrics_by_tag = file_attribs[tag]
         for metric_name in metric_names:
             metric_dict = file_entity.metric((metric_name,))
             metric_value = metric_dict.get(metric_name, 0)  # the call returns a dict
             if metric_value is None:
                 metric_value = 0
-            result[metric_name]=metric_value
-    return result
+            file_metrics_by_tag[metric_name]=metric_value
 
 if __name__ == '__main__':
-    start_time = datetime.datetime.now()
     arguments = docopt(__doc__, version='UDB Compare')
     verbose = arguments["--verbose"]
     sys.path.append(arguments["--dllDir"]) # add the dir with the DLL to interop with understand
     if verbose:
-        print ("\r\n====== udbcmp by Marcio Marchini: marcio@BetterDeveloper.net ==========") if verbose
+        print ("\r\n====== udbcmp by Marcio Marchini: marcio@BetterDeveloper.net ==========")
         print(arguments)
     try:
         import understand
     except:
         print ("Can' find the Understand DLL. Use --dllDir=...")
-        print ("Please set PYTHONPATH to point an Understand's C:/Program Files/SciTools/bin/pc-win32/python or equivalent")
+        print ("Please set PYTHONPATH to point to Understand's C:/Program Files/SciTools/bin/pc-win64/python or equivalent")
         sys.exit(-1)
-
     if verbose:
         print ("\r\n...opening input udb %s" % arguments["--before"])
-    db_before = arguments["--before"]
+    udb_before = open_udb(arguments["--before"])
     if verbose:
-        print ("\r\n...opening input udb %s" % arguments["--before"])
-    db_after = arguments["--after"]
-    try:
-        with open(arguments["--files"]) as f:
-            file_paths = f.readlines()
-    except:
-        print ("Can' read the text file '%s' with a list a files" % arguments["--files"])
-        sys.exit(-3)
+        print ("\r\n...opening output udb %s" % arguments["--before"])
+    udb_after = open_udb(arguments["--after"])
     metric_names = arguments["--metrics"].split(",")
-    comparison = compare_udbs (db_before, db_after, file_paths, metric_names)
+    comparison = compare_udbs (udb_before, udb_after, metric_names)
     print (json.dumps(comparison))
 
 
