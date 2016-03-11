@@ -52,7 +52,6 @@ def populate_file_metrics(udb, tag, metric_names, result):
     # result: dict {key: <file-path>, value: dict {key: tag, value : dict (key: metric-name, value: metric-value} } }
     file_entities = udb.ents("file ~Unresolved ~Unknown ~Unparsed")
     for file_entity in file_entities:
-        library_name = file_entity.library()
         if file_entity.library() is not "": # skip files that belong to external libraries
             continue
         file_path = file_entity.relname()
