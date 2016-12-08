@@ -82,17 +82,9 @@ def populate_file_metrics(udb, tag, metric_names, result):
            result[file_path] = file_attribs
         else:
             file_attribs = result[file_path]
-        file_metrics_by_tag = {}
-        if tag not in file_attribs:
-           file_attribs[tag] = file_metrics_by_tag
-        else:
-            file_metrics_by_tag = file_attribs[tag]
-        for metric_name in metric_names:
-            metric_dict = file_entity.metric((metric_name,))
-            metric_value = metric_dict.get(metric_name, 0)  # the call returns a dict
-            if metric_value is None:
-                metric_value = 0
-            file_metrics_by_tag[metric_name]=metric_value
+
+        metric_dict = file_entity.metric(metric_names)
+        file_attribs[tag] = metric_dict
 
 if __name__ == '__main__':
     arguments = docopt(__doc__, version='0.1')
