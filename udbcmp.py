@@ -42,11 +42,33 @@ def open_udb (udb_path):
     return db
 
 def compare_udbs (udb_before, udb_after, metric_names):
+    before_after_by_file = {}
+    populate_file_metrics(udb_before, "before", metric_names, before_after_by_file)
+    populate_file_metrics(udb_after, "after", metric_names, before_after_by_file)
+    populate_diffs(before_after_by_file, "before", "after", "diff")
+    only_changed = prune_unchanged (before_after_by_file, "diff")
+    return only_changed
+
+def prune_unchanged (before_after_by_file, diff_tag):
+    return {file:metrics_by_before_after_tag for file, metrics_by_before_after_tag in before_after_by_file.items() if diff_tag in metrics_by_before_after_tag}
+
+def _compute_dict_diff (dict_a, dict_b):
     result = {}
-    populate_file_metrics(udb_before, "before", metric_names, result)
-    populate_file_metrics(udb_after, "after", metric_names, result)
+    for key_a, value_a in dict_a.items():
+        value_b = dict_b.get(key_a, 0)
+        result[key_a] = value_b - value_a
+    for key_b, value_b in dict_b.items():
+        if key_b not in dict_a: # new metric, was not present in the file
+            result[key_b] = value_b
     return result
 
+def populate_diffs(before_after_by_file, tag_before, tag_after, tag_diff):
+    for file_path, dict_before_after in before_after_by_file.items():
+        metrics_before = dict_before_after[tag_before]
+        metrics_after = dict_before_after[tag_after]
+        if metrics_before == metrics_after:
+            continue
+        dict_before_after[tag_diff] = _compute_dict_diff(metrics_before, metrics_after)
 
 def populate_file_metrics(udb, tag, metric_names, result):
     # result: dict {key: <file-path>, value: dict {key: tag, value : dict (key: metric-name, value: metric-value} } }
@@ -73,7 +95,7 @@ def populate_file_metrics(udb, tag, metric_names, result):
             file_metrics_by_tag[metric_name]=metric_value
 
 if __name__ == '__main__':
-    arguments = docopt(__doc__, version='UDB Compare')
+    arguments = docopt(__doc__, version='0.1')
     verbose = arguments["--verbose"]
     sys.path.append(arguments["--dllDir"]) # add the dir with the DLL to interop with understand
     if verbose:
