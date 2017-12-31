@@ -27,3 +27,6 @@ cd ../..
 python udbcmp.py --before=./tmp/before.udb --after=./tmp/after.udb --dllDir=/Applications/scitools/bin/macosx/python > result.json
 ```
 
+#### Thank you!
+
+Special thanks to [Softplan](http://www.softplan.con.br) for sponsoring this project/experiment. In particular, Anderson Soffa for the support.
