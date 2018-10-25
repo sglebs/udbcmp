@@ -85,6 +85,15 @@ def populate_file_metrics(udb, tag, metric_names, result):
             file_attribs = result[file_path]
 
         metric_dict = file_entity.metric(metric_names)
+        unsupported_metrics_names = []
+        for k, v in metric_dict.items():
+            if metric_dict[k] is None:
+                unsupported_metrics_names.append(k)
+        if len(unsupported_metrics_names) > 0:
+            for k in unsupported_metrics_names:
+                del metric_dict[k]
+                sys.stderr.write("WARNING '%s' not supported by file '%s' \n" % (unsupported_metrics_names, file_path))
+
         file_attribs[tag] = metric_dict
 
 if __name__ == '__main__':
