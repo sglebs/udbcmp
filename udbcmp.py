@@ -30,6 +30,7 @@ import sys
 import re
 import datetime
 import json
+import os
 
 from docopt import docopt
 
@@ -89,7 +90,15 @@ def populate_file_metrics(udb, tag, metric_names, result):
 if __name__ == '__main__':
     arguments = docopt(__doc__, version='0.1')
     verbose = arguments["--verbose"]
-    sys.path.append(arguments["--dllDir"]) # add the dir with the DLL to interop with understand
+
+    dllDir = arguments["--dllDir"]
+    sys.path.insert(0,dllDir) # add the dir with the DLLs - Qt etc
+    os.environ["PATH"] = dllDir + os.pathsep + os.environ["PATH"] # prepend
+    sys.path.insert(0,os.path.join(dllDir,"Python")) # also needed, For interop
+    sys.path.insert(0,os.path.join(dllDir,"python")) # also needed, For interop with older versions of Understand (which used lowercase)
+    #hangs!!!!! os.environ["PYTHONPATH"] = os.path.join(dllDir,"python") + os.pathsep + os.environ.get("PYTHONPATH", "") # prepend
+
+
     if verbose:
         print ("\r\n====== udbcmp by Marcio Marchini: marcio@BetterDeveloper.net ==========")
         print(arguments)
