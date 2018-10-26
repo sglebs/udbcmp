@@ -66,7 +66,7 @@ def _compute_dict_diff (dict_a, dict_b):
 def populate_diffs(before_after_by_file, tag_before, tag_after, tag_diff):
     for file_path, dict_before_after in before_after_by_file.items():
         metrics_before = dict_before_after[tag_before]
-        metrics_after = dict_before_after[tag_after]
+        metrics_after = dict_before_after.get(tag_after,{})
         if metrics_before == metrics_after:
             continue
         dict_before_after[tag_diff] = _compute_dict_diff(metrics_before, metrics_after)
